@@ -4,9 +4,23 @@ const filterButtons = document.querySelectorAll(".filter-chip");
 const courseCards = document.querySelectorAll(".course-card");
 const emptyFilter = document.getElementById("emptyFilter");
 const yearLabel = document.getElementById("currentYear");
+const copyUpiButton = document.getElementById("copyUpiButton");
+const upiCopyStatus = document.getElementById("upiCopyStatus");
 
 if (yearLabel) {
     yearLabel.textContent = new Date().getFullYear();
+}
+
+if (copyUpiButton && upiCopyStatus) {
+    copyUpiButton.addEventListener("click", async function() {
+        const upiId = copyUpiButton.dataset.upi;
+        try {
+            await navigator.clipboard.writeText(upiId);
+            upiCopyStatus.textContent = "UPI ID copied. Check the recipient name in your app before confirming payment.";
+        } catch (error) {
+            upiCopyStatus.textContent = "UPI ID: " + upiId + " — copy it and check the recipient name before confirming.";
+        }
+    });
 }
 
 if (menuToggle && primaryNav) {
