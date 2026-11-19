@@ -4,7 +4,6 @@ const resetProgressButton = document.getElementById("resetProgress");
 const courseList = document.getElementById("dashboardCourses");
 const dashboardMessage = document.getElementById("dashboardMessage");
 
-const CURRENT_USER_KEY = "cybershieldCurrentUser";
 const courses = [
     { id: "networking", title: "Networking Essentials", category: "FOUNDATION", description: "Understand how devices communicate and build a strong networking foundation.", lessons: [
         { title: "What is a network?", content: "A network is a group of connected devices that exchange information. Your home Wi-Fi is a local network; the internet links many networks together." },
@@ -51,64 +50,85 @@ const courses = [
     ] }
 ];
 
-function readStorage(storage, key) {
-    try {
-        return storage.getItem(key);
-    } catch (error) {
-        console.error("Could not read browser storage.", error);
-        throw new Error("Browser storage is unavailable. Enable site storage to use your dashboard.");
-    }
-}
-
-function getUser() {
-    const saved = readStorage(localStorage, CURRENT_USER_KEY) || readStorage(sessionStorage, CURRENT_USER_KEY);
-    if (!saved) return null;
-    try {
-        const user = JSON.parse(saved);
-        return user && typeof user.email === "string" ? user : null;
-    } catch (error) {
-        console.error("Could not parse saved account.", error);
-        return null;
-    }
-}
-
+const authClient = window.cyberShieldAuth;
 let currentUser;
-let progressKey;
 let completedLessons = {};
+let progressSaveQueue = Promise.resolve();
 
-try {
-    currentUser = getUser();
-} catch (error) {
-    dashboardMessage.textContent = error.message;
+function showDashboardError(text) {
+    dashboardMessage.textContent = text;
     dashboardMessage.classList.add("error");
 }
 
-if (!currentUser) {
-    window.location.replace("auth.html");
-} else {
-    progressKey = `cybershieldProgress_${encodeURIComponent(currentUser.email.toLowerCase())}`;
-    welcomeText.textContent = `Welcome, ${currentUser.name || "Learner"}.`;
-    renderDashboard();
-}
+async function initializeDashboard() {
+    if (!authClient) {
+        showDashboardError("Secure sign-in is not connected yet. Please check back after setup.");
+        return;
+    }
 
-function loadProgress() {
-    const savedProgress = readStorage(localStorage, progressKey);
-    if (!savedProgress) return {};
     try {
-        const parsedProgress = JSON.parse(savedProgress);
-        return parsedProgress && typeof parsedProgress === "object" && !Array.isArray(parsedProgress)
-            ? parsedProgress
-            : {};
+        const { data, error } = await authClient.auth.getUser();
+        if (error || !data.user) {
+            window.location.replace("auth.html");
+            return;
+        }
+
+        currentUser = data.user;
+        const name = (currentUser.user_metadata && currentUser.user_metadata.full_name) || "Learner";
+        welcomeText.textContent = "Welcome, " + name + ".";
+        completedLessons = await loadProgress();
+        renderDashboard();
     } catch (error) {
-        console.error("Could not parse saved learning progress.", error);
-        dashboardMessage.textContent = "Saved progress could not be read. You can reset it and start tracking again.";
-        dashboardMessage.classList.add("error");
-        return {};
+        console.error("Could not load the signed-in learner.", error);
+        showDashboardError("Could not load your account. Refresh the page and try again.");
     }
 }
 
+async function loadProgress() {
+    const { data, error } = await authClient
+        .from("user_progress")
+        .select("completed_lessons")
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Could not load synced learning progress.", error);
+        showDashboardError("Progress could not be loaded. The site owner may need to finish database setup.");
+        return {};
+    }
+
+    if (!data && currentUser.email) {
+        const legacyKey = "cybershieldProgress_" + encodeURIComponent(currentUser.email.toLowerCase());
+        try {
+            const saved = localStorage.getItem(legacyKey);
+            if (saved) {
+                const legacyProgress = JSON.parse(saved);
+                if (legacyProgress && typeof legacyProgress === "object" && !Array.isArray(legacyProgress)) {
+                    const { error: migrationError } = await authClient.from("user_progress").upsert({
+                        user_id: currentUser.id,
+                        completed_lessons: legacyProgress,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: "user_id" });
+                    if (migrationError) {
+                        console.error("Could not migrate local learning progress.", migrationError);
+                        showDashboardError("Your earlier progress remains on this browser and could not be synced yet.");
+                    } else {
+                        localStorage.removeItem(legacyKey);
+                    }
+                    return legacyProgress;
+                }
+            }
+        } catch (migrationError) {
+            console.error("Could not read earlier learning progress.", migrationError);
+        }
+    }
+
+    const progress = data && data.completed_lessons;
+    return progress && typeof progress === "object" && !Array.isArray(progress) ? progress : {};
+}
+
+initializeDashboard();
 function renderDashboard() {
-    completedLessons = loadProgress();
     courseList.replaceChildren();
 
     courses.forEach(function(course) {
@@ -197,17 +217,30 @@ function renderDashboard() {
 }
 
 function saveProgress() {
-    try {
-        localStorage.setItem(progressKey, JSON.stringify(completedLessons));
+    if (!authClient || !currentUser) return Promise.resolve();
+
+    const snapshot = Object.assign({}, completedLessons);
+    progressSaveQueue = progressSaveQueue.then(async function() {
+        const { error } = await authClient.from("user_progress").upsert({
+            user_id: currentUser.id,
+            completed_lessons: snapshot,
+            updated_at: new Date().toISOString()
+        }, { onConflict: "user_id" });
+
+        if (error) {
+            console.error("Could not save synced learning progress.", error);
+            showDashboardError("Progress could not be saved. Check your connection and try again.");
+            return;
+        }
         dashboardMessage.textContent = "";
         dashboardMessage.classList.remove("error");
-    } catch (error) {
-        console.error("Could not save learning progress.", error);
-        dashboardMessage.textContent = "Progress could not be saved in this browser. Check storage availability.";
-        dashboardMessage.classList.add("error");
-    }
-}
+    }).catch(function(error) {
+        console.error("Could not save synced learning progress.", error);
+        showDashboardError("Progress could not be saved. Check your connection and try again.");
+    });
 
+    return progressSaveQueue;
+}
 function updateStats() {
     const completedCount = Object.values(completedLessons).filter(Boolean).length;
     const totalLessons = courses.reduce(function(total, course) {
@@ -224,21 +257,26 @@ function updateStats() {
     document.getElementById("overallProgress").textContent = `${Math.round(completedCount / totalLessons * 100)}%`;
 }
 
-resetProgressButton.addEventListener("click", function() {
-    if (!window.confirm("Reset all lesson progress for this account on this browser?")) return;
+resetProgressButton.addEventListener("click", async function() {
+    if (!window.confirm("Reset all lesson progress for your account?")) return;
     completedLessons = {};
-    saveProgress();
     renderDashboard();
+    await saveProgress();
 });
-
-logoutBtn.addEventListener("click", function() {
+logoutBtn.addEventListener("click", async function() {
+    if (!authClient) {
+        window.location.replace("auth.html");
+        return;
+    }
+    logoutBtn.disabled = true;
     try {
-        localStorage.removeItem(CURRENT_USER_KEY);
-        sessionStorage.removeItem(CURRENT_USER_KEY);
-        window.location.href = "auth.html";
+        await progressSaveQueue;
+        const { error } = await authClient.auth.signOut();
+        if (error) throw error;
+        window.location.replace("auth.html");
     } catch (error) {
-        console.error("Could not clear the current session.", error);
-        dashboardMessage.textContent = "Could not sign out because browser storage is unavailable. Close this tab to end a temporary session.";
-        dashboardMessage.classList.add("error");
+        console.error("Could not sign out.", error);
+        showDashboardError("Could not sign out. Check your connection and try again.");
+        logoutBtn.disabled = false;
     }
 });

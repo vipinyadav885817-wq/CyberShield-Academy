@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#07111f">
-    <meta name="description" content="Sign in or create your CyberShield Academy learning demo account.">
+    <meta name="description" content="Sign in or create your CyberShield Academy learning account.">
     <title>Sign in | CyberShield Academy</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -18,8 +18,8 @@
         <aside class="auth-aside">
             <p class="eyebrow"><span class="status-dot"></span> LEARN AT YOUR OWN PACE</p>
             <h1>Small steps.<br><span>Stronger skills.</span></h1>
-            <p>Sign in to track your progress or create a free demo account to get started.</p>
-            <div class="auth-aside-note"><span class="check-mark">✓</span><span>Progress saved on this browser</span></div>
+            <p>Sign in to track your progress or create a free account to get started.</p>
+            <div class="auth-aside-note"><span class="check-mark">✓</span><span>Progress synced with your account</span></div>
             <div class="auth-aside-note"><span class="check-mark">✓</span><span>Beginner-friendly learning paths</span></div>
             <div class="auth-aside-note"><span class="check-mark">✓</span><span>Ethical practice comes first</span></div>
         </aside>
@@ -40,7 +40,6 @@
                     <input type="password" id="loginPassword" name="password" autocomplete="current-password" placeholder="Enter your password" required>
                     <button class="password-toggle" type="button" data-toggle-password="loginPassword" aria-label="Show password">Show</button>
                 </div>
-                <label class="remember-option"><input id="rememberMe" type="checkbox" checked> Keep me signed in on this browser</label>
                 <button class="button button-primary auth-submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
             </form>
             <form id="registerForm" hidden>
@@ -57,11 +56,24 @@
                 <p class="password-hint" id="strengthText">Use at least 8 characters. Avoid reusing a real password.</p>
                 <button class="button button-primary auth-submit" type="submit">Create account <span aria-hidden="true">→</span></button>
             </form>
+            <form id="resetForm" hidden>
+                <label for="newPassword">New password</label>
+                <div class="password-field">
+                    <input type="password" id="newPassword" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
+                    <button class="password-toggle" type="button" data-toggle-password="newPassword" aria-label="Show password">Show</button>
+                </div>
+                <label for="confirmPassword">Confirm new password</label>
+                <input type="password" id="confirmPassword" autocomplete="new-password" minlength="8" placeholder="Enter it again" required>
+                <button class="button button-primary auth-submit" type="submit">Update password <span aria-hidden="true">→</span></button>
+            </form>
             <p id="message" class="auth-message" role="status" aria-live="polite"></p>
-            <p class="demo-disclaimer">Demo only: account details are stored in this browser. Don't use a real or reused password. There is no verified email or password-reset service.</p>
+            <p class="demo-disclaimer">Your password is handled by the secure account service and is never stored by this website. Use a unique password.</p>
         </section>
     </main>
     <footer class="app-footer">CyberShield Academy · Learn thoughtfully. Practice ethically.</footer>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-client.js"></script>
     <script src="auth.js"></script>
 </body>
 </html>
