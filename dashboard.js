@@ -4,56 +4,13 @@ const resetProgressButton = document.getElementById("resetProgress");
 const courseList = document.getElementById("dashboardCourses");
 const dashboardMessage = document.getElementById("dashboardMessage");
 
-const courses = [
-    { id: "networking", title: "Networking Essentials", category: "FOUNDATION", description: "Understand how devices communicate and build a strong networking foundation.", lessons: [
-        { title: "What is a network?", content: "A network is a group of connected devices that exchange information. Your home Wi-Fi is a local network; the internet links many networks together." },
-        { title: "Devices and connections", content: "Routers direct traffic between networks, while switches connect devices inside a local network. Wi-Fi and Ethernet are two common ways a device joins one." },
-        { title: "IP addresses in everyday terms", content: "An IP address helps identify where network traffic should go. Devices may have a private address inside a home network and use a shared public address to reach the internet." },
-        { title: "Ports and protocols", content: "Protocols are agreed rules for communication. A port helps a device direct incoming information to the right service; HTTPS commonly uses port 443." },
-        { title: "How the web connects", content: "A browser looks up a site's domain, connects to a server, and requests a page using HTTP or HTTPS. HTTPS encrypts the connection between the browser and the site." },
-        { title: "Networking recap", content: "Think about a message moving from your laptop, through a router, and to a website. Which devices and addressing concepts help it reach the right destination?" }
-    ] },
-    { id: "linux", title: "Linux Fundamentals", category: "FOUNDATION", description: "Get comfortable with the terminal, files, permissions, and Linux concepts.", lessons: [
-        { title: "Meet the command line", content: "A terminal lets you interact with a computer by entering text commands. Start by observing where you are with `pwd`, then list nearby files with `ls`." },
-        { title: "Navigate files and folders", content: "Folders organize files into a tree. Use `cd` to move between folders and `mkdir` to create a practice folder in a location you own." },
-        { title: "Read and organize files", content: "Use `cat` to display a small text file and `cp` to make a copy. Check a command's manual with `man` before using unfamiliar options." },
-        { title: "Users and permissions", content: "Linux permissions define who can read, change, or run a file. Inspect permissions with `ls -l`; change only files you own or are authorized to manage." },
-        { title: "Linux recap", content: "Practice in a temporary folder: create a text file, list it, read it, and remove only that file when you are done. Build confidence before changing system files." }
-    ] },
-    { id: "security", title: "Security Foundations", category: "SECURITY", description: "Learn core security principles, common risks, and safer online decisions.", lessons: [
-        { title: "The security mindset", content: "Security is about reducing risk, not promising that risk is zero. Notice what you want to protect, what could go wrong, and which practical safeguard would help." },
-        { title: "Confidentiality, integrity, availability", content: "Confidentiality limits information to the right people; integrity helps keep it accurate; availability means it can be used when needed. Together these goals guide many security decisions." },
-        { title: "Identity and access basics", content: "Use unique passwords, a password manager, and multi-factor authentication where available. Give each person or service only the access it needs." },
-        { title: "Updates and backups", content: "Updates fix defects and security issues, while backups help recover from mistakes or device loss. Keep important backups separate from the device they protect and test that they can be restored." },
-        { title: "Everyday risk awareness", content: "Pause before sharing personal information or approving unexpected sign-in requests. Verify unusual requests through a trusted channel you find independently." },
-        { title: "Security recap", content: "Choose one account you use and identify one small improvement: a unique password, multi-factor authentication, or an up-to-date recovery method." }
-    ] },
-    { id: "web-safety", title: "Web Safety Basics", category: "SECURITY", description: "Explore how websites work and how to protect accounts and data responsibly.", lessons: [
-        { title: "How a browser reaches a site", content: "A browser uses a domain name to find a server, then requests the page and its resources. The address bar helps you confirm which site you are visiting." },
-        { title: "HTTPS and secure connections", content: "HTTPS encrypts information in transit and helps verify the site endpoint. It does not prove that a website is honest, so check the domain and context too." },
-        { title: "Safer account habits", content: "Use unique passwords and a trusted password manager. Enable multi-factor authentication and keep account recovery details current." },
-        { title: "Safer browsing", content: "Avoid installing unexpected downloads or browser extensions. Review permissions and use official sources when you need an app or update." },
-        { title: "Web safety recap", content: "Before entering sensitive information, check the domain, connection, and reason for the request. If anything seems unusual, stop and verify independently." }
-    ] },
-    { id: "threat-awareness", title: "Threat Awareness", category: "PRACTICE", description: "Recognize suspicious messages and practice safer habits in daily life.", lessons: [
-        { title: "Spotting suspicious messages", content: "Unexpected urgency, unfamiliar senders, odd requests, or mismatched links can be warning signs. One sign alone may not prove a message is malicious, so verify before acting." },
-        { title: "Links and attachments", content: "Do not open an unexpected attachment just to see what it is. Check the full destination carefully and visit important services using a saved bookmark or known address." },
-        { title: "Social engineering signals", content: "A message may pressure you to reveal information, send money, or bypass a normal process. Contact the person or organization through a trusted channel to confirm." },
-        { title: "What to do when something feels wrong", content: "Stop interacting, report the message using your organization's process, and change affected credentials from the official site if needed. Ask a trusted support contact for help." }
-    ] },
-    { id: "ethical-practice", title: "Ethical Security Practice", category: "PRACTICE", description: "Understand permission, safe boundaries, and responsible security learning.", lessons: [
-        { title: "Permission and scope", content: "Only assess systems you own or have explicit written permission to test. Permission should define the systems, allowed activities, timing, and a contact for concerns." },
-        { title: "Safe practice environments", content: "Use purpose-built training exercises, local virtual machines, or platforms that explicitly authorize practice. Keep experiments isolated from real accounts, networks, and data." },
-        { title: "Responsible reporting", content: "If you discover a concern, avoid accessing or changing data. Record only the minimum details needed and follow the owner's published reporting process." },
-        { title: "Keep learning ethically", content: "Technical curiosity works best with clear boundaries. Before any exercise, ask: do I own this system, or do I have explicit permission for this exact activity?" },
-        { title: "Ethics recap", content: "Write down the scope of a practice lab and one action that would be outside it. Respecting that boundary is part of the skill, not an optional extra." }
-    ] }
-];
+const courses = window.cyberShieldCurriculum;
 
 const authClient = window.cyberShieldAuth;
 let currentUser;
 let completedLessons = {};
 let progressSaveQueue = Promise.resolve();
+let expandedLessons = new Set();
 
 function showDashboardError(text) {
     dashboardMessage.textContent = text;
@@ -128,6 +85,196 @@ async function loadProgress() {
 }
 
 initializeDashboard();
+
+function makeSvgElement(name, attributes, value) {
+    const element = document.createElementNS("http://www.w3.org/2000/svg", name);
+    Object.keys(attributes || {}).forEach(function(key) {
+        element.setAttribute(key, attributes[key]);
+    });
+    if (value) element.textContent = value;
+    return element;
+}
+
+function renderCourseDiagram(course) {
+    if (!course.diagram) return null;
+
+    const spec = course.diagram;
+    const accent = spec.accent || "#55c4ff";
+    const figure = document.createElement("figure");
+    figure.className = "course-map";
+    const svg = makeSvgElement("svg", {
+        viewBox: "0 0 560 176",
+        role: "img",
+        "aria-label": course.title + " concept map. " + spec.caption
+    });
+    svg.appendChild(makeSvgElement("rect", {
+        x: "1", y: "1", width: "558", height: "174", rx: "15",
+        fill: "#091827", stroke: "#243b52"
+    }));
+    svg.appendChild(makeSvgElement("text", {
+        x: "20", y: "25", class: "diagram-label"
+    }, "CYBERSHIELD FIELD MAP"));
+
+    function drawBox(label, x, y, width, height, number) {
+        svg.appendChild(makeSvgElement("rect", {
+            x: String(x), y: String(y), width: String(width), height: String(height),
+            rx: "11", fill: "#10253a", stroke: accent, "stroke-width": "1.5"
+        }));
+        svg.appendChild(makeSvgElement("circle", {
+            cx: String(x + 14), cy: String(y + 14), r: "9", fill: accent, opacity: ".18"
+        }));
+        svg.appendChild(makeSvgElement("text", {
+            x: String(x + 14), y: String(y + 17), class: "diagram-number",
+            "text-anchor": "middle", fill: accent
+        }, String(number)));
+        svg.appendChild(makeSvgElement("text", {
+            x: String(x + width / 2), y: String(y + height / 2 + 4),
+            class: "diagram-node-label", "text-anchor": "middle"
+        }, label));
+    }
+
+    function drawLine(x1, y1, x2, y2) {
+        svg.appendChild(makeSvgElement("line", {
+            x1: String(x1), y1: String(y1), x2: String(x2), y2: String(y2),
+            stroke: accent, "stroke-width": "2", "stroke-dasharray": "5 5", opacity: ".8"
+        }));
+        svg.appendChild(makeSvgElement("circle", {
+            cx: String(x2 - 5), cy: String(y2), r: "3.5", fill: accent
+        }));
+    }
+
+    if (spec.kind === "triangle") {
+        const points = [{ x: 280, y: 82 }, { x: 170, y: 139 }, { x: 390, y: 139 }];
+        [[0, 1], [1, 2], [2, 0]].forEach(function(pair) {
+            svg.appendChild(makeSvgElement("line", {
+                x1: String(points[pair[0]].x), y1: String(points[pair[0]].y),
+                x2: String(points[pair[1]].x), y2: String(points[pair[1]].y),
+                stroke: accent, "stroke-width": "2", opacity: ".75"
+            }));
+        });
+        spec.nodes.forEach(function(label, index) {
+            const point = points[index];
+            svg.appendChild(makeSvgElement("circle", {
+                cx: String(point.x), cy: String(point.y), r: "54",
+                fill: "#10253a", stroke: accent, "stroke-width": "2"
+            }));
+            svg.appendChild(makeSvgElement("text", {
+                x: String(point.x), y: String(point.y + 4), class: "diagram-node-label",
+                "text-anchor": "middle"
+            }, label));
+        });
+    } else if (spec.kind === "stack") {
+        svg.appendChild(makeSvgElement("line", {
+            x1: "280", y1: "45", x2: "280", y2: "148",
+            stroke: accent, "stroke-width": "2", "stroke-dasharray": "4 5"
+        }));
+        spec.nodes.forEach(function(label, index) {
+            const y = 40 + index * 31;
+            svg.appendChild(makeSvgElement("rect", {
+                x: "158", y: String(y), width: "244", height: "24", rx: "8",
+                fill: "#10253a", stroke: accent, "stroke-width": "1.3"
+            }));
+            svg.appendChild(makeSvgElement("text", {
+                x: "280", y: String(y + 16), class: "diagram-node-label", "text-anchor": "middle"
+            }, label));
+        });
+    } else if (spec.kind === "scope") {
+        svg.appendChild(makeSvgElement("rect", {
+            x: "11", y: "40", width: "538", height: "111", rx: "13",
+            fill: "none", stroke: accent, "stroke-width": "1.5", "stroke-dasharray": "7 6"
+        }));
+        svg.appendChild(makeSvgElement("text", {
+            x: "280", y: "36", class: "diagram-label", "text-anchor": "middle", fill: accent
+        }, "AUTHORIZED SCOPE"));
+        spec.nodes.forEach(function(label, index) {
+            const x = 20 + index * 136;
+            if (index > 0) drawLine(x - 19, 96, x - 3, 96);
+            drawBox(label, x, 70, 116, 52, index + 1);
+        });
+    } else {
+        const width = 118;
+        const gap = 20;
+        const start = 10;
+        spec.nodes.forEach(function(label, index) {
+            const x = start + index * (width + gap);
+            if (index > 0) drawLine(x - gap + 3, 89, x - 5, 89);
+            drawBox(label, x, 62, width, 54, index + 1);
+        });
+    }
+
+    const caption = document.createElement("figcaption");
+    caption.textContent = spec.caption;
+    figure.append(svg, caption);
+    return figure;
+}
+
+function addLessonPanel(parent, headingText, bodyText, className) {
+    if (!bodyText) return;
+    const panel = document.createElement("section");
+    panel.className = "lesson-panel" + (className ? " " + className : "");
+    const heading = document.createElement("h4");
+    heading.textContent = headingText;
+    const body = document.createElement("p");
+    body.textContent = bodyText;
+    panel.append(heading, body);
+    parent.append(panel);
+}
+
+function renderLessonContent(lesson, course) {
+    const content = document.createElement("div");
+    content.className = "lesson-content";
+    content.hidden = true;
+
+    const meta = document.createElement("div");
+    meta.className = "lesson-meta";
+    const level = document.createElement("span");
+    level.className = "lesson-level";
+    level.textContent = lesson.level + " LEVEL";
+    const time = document.createElement("span");
+    time.textContent = lesson.minutes + " MIN READ";
+    meta.append(level, time);
+
+    const reading = document.createElement("div");
+    reading.className = "lesson-reading";
+    (lesson.read || []).forEach(function(paragraphText) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = paragraphText;
+        reading.append(paragraph);
+    });
+    content.append(meta, reading);
+    addLessonPanel(content, "REAL-WORLD EXAMPLE", lesson.example, "lesson-example");
+    addLessonPanel(content, "SAFE PRACTICE", lesson.practice, "lesson-practice");
+
+    if (lesson.question && lesson.answer) {
+        const check = document.createElement("details");
+        check.className = "lesson-check";
+        const summary = document.createElement("summary");
+        summary.textContent = "Quick check";
+        const question = document.createElement("p");
+        question.textContent = lesson.question;
+        const answer = document.createElement("details");
+        answer.className = "lesson-answer";
+        const answerSummary = document.createElement("summary");
+        answerSummary.textContent = "Show answer";
+        const answerText = document.createElement("p");
+        answerText.textContent = lesson.answer;
+        answer.append(answerSummary, answerText);
+        check.append(summary, question, answer);
+        content.append(check);
+    }
+
+    if (course.references && course.references.length) {
+        const readingLink = document.createElement("a");
+        readingLink.className = "lesson-reference";
+        readingLink.href = course.references[0].url;
+        readingLink.target = "_blank";
+        readingLink.rel = "noopener noreferrer";
+        readingLink.textContent = "Trusted source: " + course.references[0].label;
+        content.append(readingLink);
+    }
+    return content;
+}
+
 function renderDashboard() {
     courseList.replaceChildren();
 
@@ -145,7 +292,7 @@ function renderDashboard() {
         headingGroup.append(title, description);
         const category = document.createElement("span");
         category.className = "course-count";
-        category.textContent = course.category;
+        category.textContent = course.category + " · " + course.lessons.length + " LESSONS";
         header.append(headingGroup, category);
 
         const doneCount = course.lessons.filter(function(lesson, index) {
@@ -178,14 +325,19 @@ function renderDashboard() {
             expandButton.className = "lesson-expand";
             expandButton.type = "button";
             expandButton.textContent = lesson.title;
-            expandButton.setAttribute("aria-expanded", "false");
-            const lessonContent = document.createElement("p");
-            lessonContent.className = "lesson-content";
-            lessonContent.textContent = lesson.content;
-            lessonContent.hidden = true;
+            const isExpanded = expandedLessons.has(lessonId);
+            expandButton.setAttribute("aria-expanded", String(isExpanded));
+            const levelBadge = document.createElement("span");
+            levelBadge.className = "lesson-row-level";
+            levelBadge.textContent = lesson.level;
+            const lessonContent = renderLessonContent(lesson, course);
+            lessonContent.hidden = !isExpanded;
             expandButton.addEventListener("click", function() {
-                lessonContent.hidden = !lessonContent.hidden;
-                expandButton.setAttribute("aria-expanded", String(!lessonContent.hidden));
+                const open = expandedLessons.has(lessonId);
+                if (open) expandedLessons.delete(lessonId);
+                else expandedLessons.add(lessonId);
+                lessonContent.hidden = open;
+                expandButton.setAttribute("aria-expanded", String(!open));
             });
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
@@ -196,12 +348,15 @@ function renderDashboard() {
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
             label.textContent = "Done";
-            lessonHeader.append(expandButton, checkbox, label);
+            lessonHeader.append(expandButton, levelBadge, checkbox, label);
             item.append(lessonHeader, lessonContent);
             lessonList.append(item);
         });
 
-        card.append(header, progressBar, countLabel, lessonList);
+        card.append(header);
+        const diagram = renderCourseDiagram(course);
+        if (diagram) card.append(diagram);
+        card.append(progressBar, countLabel, lessonList);
         courseList.append(card);
     });
 
